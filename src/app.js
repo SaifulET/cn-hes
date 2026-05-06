@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bookingRoutes from "./modules/booking/booking.routes.js";
+import adminTransactionRoutes from "./modules/adminTransaction/adminTransaction.routes.js";
 import categoryRoutes from "./modules/category/category.routes.js";
 import chatRoutes from "./modules/chat/chat.routes.js";
 import legalContentRoutes from "./modules/legalContent/legalContent.routes.js";
+import notificationRoutes from "./modules/notification/notification.routes.js";
 import paymentRoutes from "./modules/payment/payment.routes.js";
 import serviceRoutes from "./modules/service/service.routes.js";
 import reviewRoutes from "./modules/review/review.routes.js";
@@ -39,9 +41,11 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
+app.use("/api/v1/admin/transactions", adminTransactionRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/legal-contents", legalContentRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/services", serviceRoutes);
 app.use("/api/v1/reviews", reviewRoutes);

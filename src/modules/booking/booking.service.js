@@ -3,6 +3,7 @@ import AppError from "../../helpers/appError.js";
 import Booking from "../../models/booking.model.js";
 import Service from "../../models/service.model.js";
 import User from "../../models/user.model.js";
+import { createNotification } from "../notification/notification.service.js";
 
 const bookingPopulate = [
   {
@@ -57,6 +58,18 @@ export const createBookingRequest = async (providerId, payload) => {
   });
 
   await booking.populate(bookingPopulate);
+  await createNotification({
+    recipientId: booking.userId._id,
+    recipientRole: "user",
+    type: "booking_request",
+    title: "New booking request",
+    message: `${booking.providerId.name} sent you a booking request for ${booking.serviceName}.`,
+    metadata: {
+      bookingId: booking._id,
+      providerId: booking.providerId._id,
+      serviceId: booking.serviceId._id || booking.serviceId
+    }
+  });
 
   return booking;
 };
@@ -97,6 +110,19 @@ export const updateBookingStatusByUser = async (userId, bookingId, status) => {
   booking.status = status;
   await booking.save();
   await booking.populate(bookingPopulate);
+  if (status === "completed") {
+    await createNotification({
+      recipientId: booking.providerId._id,
+      recipientRole: "provider",
+      type: "service_accepted_by_user",
+      title: "Service accepted by user",
+      message: `${booking.userId.name} accepted the service ${booking.serviceName}.`,
+      metadata: {
+        bookingId: booking._id,
+        userId: booking.userId._id
+      }
+    });
+  }
 
   return booking;
 };

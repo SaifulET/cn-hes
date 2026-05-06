@@ -3,6 +3,7 @@ import AppError from "../../helpers/appError.js";
 import { env } from "../../config/env.js";
 import Booking from "../../models/booking.model.js";
 import Payment from "../../models/payment.model.js";
+import { createNotification, createNotificationsForRole } from "../notification/notification.service.js";
 
 const stripe = env.stripeSecretKey
   ? new Stripe(env.stripeSecretKey)
@@ -92,6 +93,47 @@ const syncBookingStatusWithPayment = (booking, payment, stripeStatus) => {
   }
 };
 
+const maybeSendPaymentNotifications = async (booking, payment) => {
+  if (payment.paymentStatus !== "succeeded" || payment.paymentDate == null) {
+    return;
+  }
+
+  const existingUserNotification = await Payment.countDocuments({
+    _id: payment._id,
+    paymentStatus: "succeeded"
+  });
+
+  if (!existingUserNotification) {
+    return;
+  }
+
+  await Promise.all([
+    createNotification({
+      recipientId: booking.userId._id,
+      recipientRole: "user",
+      type: "payment_successful",
+      title: "Payment successful",
+      message: `Your payment of $${payment.amount} for ${booking.serviceName} was successful.`,
+      metadata: {
+        bookingId: booking._id,
+        paymentId: payment._id
+      }
+    }),
+    createNotificationsForRole({
+      role: "admin",
+      type: "user_payment",
+      title: "User payment received",
+      message: `${booking.userId.name} paid $${payment.amount} for ${booking.serviceName}.`,
+      metadata: {
+        bookingId: booking._id,
+        paymentId: payment._id,
+        userId: booking.userId._id,
+        providerId: booking.providerId._id
+      }
+    })
+  ]);
+};
+
 const findOrCreatePaymentForBooking = async (booking) => {
   let payment = await Payment.findOne({ bookingId: booking._id });
 
@@ -117,6 +159,7 @@ export const createBookingPayment = async (user, { bookingId, paymentMethodId })
 
   const booking = await ensureBookingPayableByUser(bookingId, user._id);
   const payment = await findOrCreatePaymentForBooking(booking);
+  const previousStatus = payment.paymentStatus;
 
   const amount = Math.round(Number(booking.price) * 100);
 
@@ -147,6 +190,9 @@ export const createBookingPayment = async (user, { bookingId, paymentMethodId })
   syncBookingStatusWithPayment(booking, payment, paymentIntent.status);
   await Promise.all([booking.save(), payment.save()]);
   await payment.populate(paymentPopulate);
+  if (previousStatus !== "succeeded" && payment.paymentStatus === "succeeded") {
+    await maybeSendPaymentNotifications(booking, payment);
+  }
 
   return {
     booking,
@@ -171,6 +217,7 @@ export const confirmBookingPayment = async (userId, { bookingId, paymentIntentId
 
   const booking = await ensureBookingPayableByUser(bookingId, userId);
   const payment = await findOrCreatePaymentForBooking(booking);
+  const previousStatus = payment.paymentStatus;
 
   if (payment.stripePaymentIntentId && payment.stripePaymentIntentId !== paymentIntentId) {
     throw new AppError("Payment intent does not match this booking.", 400);
@@ -188,6 +235,9 @@ export const confirmBookingPayment = async (userId, { bookingId, paymentIntentId
   await Promise.all([booking.save(), payment.save()]);
   await booking.populate(bookingPaymentPopulate);
   await payment.populate(paymentPopulate);
+  if (previousStatus !== "succeeded" && payment.paymentStatus === "succeeded") {
+    await maybeSendPaymentNotifications(booking, payment);
+  }
 
   return {
     booking,

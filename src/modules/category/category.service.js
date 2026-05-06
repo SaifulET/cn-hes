@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import AppError from "../../helpers/appError.js";
 import Category from "../../models/category.model.js";
 import Service from "../../models/service.model.js";
+import { createNotificationsForRole } from "../notification/notification.service.js";
 
 export const createCategory = async (payload, file) => {
   const categoryName = payload.categoryName?.trim();
@@ -11,10 +12,22 @@ export const createCategory = async (payload, file) => {
     throw new AppError("Category already exists.", 409);
   }
 
-  return Category.create({
+  const category = await Category.create({
     categoryName,
     icon: file?.location || ""
   });
+
+  await createNotificationsForRole({
+    role: "provider",
+    type: "new_category_added",
+    title: "New category added",
+    message: `${category.categoryName} has been added as a new category.`,
+    metadata: {
+      categoryId: category._id
+    }
+  });
+
+  return category;
 };
 
 export const updateCategory = async (categoryId, payload, file) => {

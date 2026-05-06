@@ -9,6 +9,7 @@ import {
 } from "../../helpers/tokenHelper.js";
 import { sanitizeUser } from "../../helpers/userSanitizer.js";
 import { env } from "../../config/env.js";
+import { createNotificationsForRole } from "../notification/notification.service.js";
 
 const buildAuthResponse = async (user) => {
   const payload = {
@@ -108,6 +109,19 @@ export const signupUser = async (payload) => {
   });
 
   await sendVerificationOtpEmail(user, otp);
+  await createNotificationsForRole({
+    role: "admin",
+    type: user.role === "provider" ? "new_provider_added" : "new_user_added",
+    title: user.role === "provider" ? "New provider added" : "New user added",
+    message:
+      user.role === "provider"
+        ? `${user.name} has registered as a provider.`
+        : `${user.name} has registered as a user.`,
+    metadata: {
+      userId: user._id,
+      role: user.role
+    }
+  });
 
   return {
     user: sanitizeUser(user)

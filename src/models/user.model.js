@@ -83,6 +83,32 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["not_connected", "pending", "connected"],
       default: "not_connected"
+    },
+    stripeBankAccount: {
+      bankName: {
+        type: String,
+        default: ""
+      },
+      accountHolderName: {
+        type: String,
+        default: ""
+      },
+      accountHolderType: {
+        type: String,
+        default: ""
+      },
+      last4: {
+        type: String,
+        default: ""
+      },
+      currency: {
+        type: String,
+        default: ""
+      },
+      country: {
+        type: String,
+        default: ""
+      }
     }
   },
   {
