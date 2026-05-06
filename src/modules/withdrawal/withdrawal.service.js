@@ -5,13 +5,15 @@ import { env } from "../../config/env.js";
 import Payment from "../../models/payment.model.js";
 import User from "../../models/user.model.js";
 import Withdrawal from "../../models/withdrawal.model.js";
+import { createNotification, createNotificationsForRole } from "../notification/notification.service.js";
 
 const stripe = env.stripeSecretKey ? new Stripe(env.stripeSecretKey) : null;
 
 const withdrawalPopulate = [
   {
     path: "providerId",
-    select: "name email phone profileImage role stripeAccountId stripeAccountStatus"
+    select:
+      "name email phone profileImage role stripeAccountId stripeAccountStatus stripeBankAccount"
   },
   {
     path: "approvedBy",
@@ -50,6 +52,8 @@ const getExternalAccountSummary = async (stripeAccountId) => {
   return bankAccount
     ? {
         bankName: bankAccount.bank_name || "",
+        accountHolderName: bankAccount.account_holder_name || "",
+        accountHolderType: bankAccount.account_holder_type || "",
         last4: bankAccount.last4 || "",
         currency: bankAccount.currency || "",
         country: bankAccount.country || ""
@@ -57,11 +61,30 @@ const getExternalAccountSummary = async (stripeAccountId) => {
     : null;
 };
 
+const maskAccountNumber = (accountNumber) => {
+  const digits = String(accountNumber || "").replace(/\s+/g, "");
+  const visibleDigits = digits.slice(-4);
+
+  if (!visibleDigits) {
+    return "";
+  }
+
+  return `**** **** **** ${visibleDigits}`;
+};
+
 const syncUserStripeAccountStatus = async (user) => {
   ensureStripeConfigured();
 
   if (!user.stripeAccountId) {
     user.stripeAccountStatus = "not_connected";
+    user.stripeBankAccount = {
+      bankName: "",
+      accountHolderName: "",
+      accountHolderType: "",
+      last4: "",
+      currency: "",
+      country: ""
+    };
     await user.save();
 
     return {
@@ -78,8 +101,17 @@ const syncUserStripeAccountStatus = async (user) => {
     account.payouts_enabled && account.details_submitted
       ? "connected"
       : "pending";
+  const bankAccount = await getExternalAccountSummary(account.id);
 
   user.stripeAccountStatus = status;
+  user.stripeBankAccount = bankAccount || {
+    bankName: "",
+    accountHolderName: "",
+    accountHolderType: "",
+    last4: "",
+    currency: "",
+    country: ""
+  };
   await user.save();
 
   return {
@@ -87,7 +119,7 @@ const syncUserStripeAccountStatus = async (user) => {
     status,
     payoutsEnabled: account.payouts_enabled,
     detailsSubmitted: account.details_submitted,
-    bankAccount: await getExternalAccountSummary(account.id)
+    bankAccount
   };
 };
 
@@ -241,10 +273,24 @@ export const createWithdrawalRequest = async (providerId, payload) => {
 
   const withdrawal = await Withdrawal.create({
     providerId,
-    amount
+    amount,
+    requestedBankName: payload.bankName.trim(),
+    requestedAccountType: payload.accountType.trim(),
+    requestedAccountHolderName: payload.accountHolderName.trim(),
+    requestedAccountNumberMasked: maskAccountNumber(payload.accountNumber)
   });
 
   await withdrawal.populate(withdrawalPopulate);
+  await createNotificationsForRole({
+    role: "admin",
+    type: "new_withdraw_request",
+    title: "New withdraw request",
+    message: `${withdrawal.providerId.name} requested a withdrawal of $${withdrawal.amount}.`,
+    metadata: {
+      withdrawalId: withdrawal._id,
+      providerId: withdrawal.providerId._id
+    }
+  });
 
   return {
     withdrawal,
@@ -372,12 +418,31 @@ export const approveWithdrawalRequest = async (adminId, withdrawalId, _payload, 
   withdrawal.cancelledAt = null;
   withdrawal.stripeTransferId = transfer.id;
   withdrawal.stripePayoutId = payout.id;
+  withdrawal.destinationBankAccount = {
+    bankName: accountStatus.bankAccount?.bankName || "",
+    accountHolderName: accountStatus.bankAccount?.accountHolderName || "",
+    accountHolderType: accountStatus.bankAccount?.accountHolderType || "",
+    last4: accountStatus.bankAccount?.last4 || "",
+    currency: accountStatus.bankAccount?.currency || "",
+    country: accountStatus.bankAccount?.country || ""
+  };
   withdrawal.stripeResponse = {
     transfer,
     payout
   };
   await withdrawal.save();
   await withdrawal.populate(withdrawalPopulate);
+  await createNotification({
+    recipientId: withdrawal.providerId._id,
+    recipientRole: "provider",
+    type: "withdraw_request_approved",
+    title: "Withdraw request approved",
+    message: `Your withdrawal request of $${withdrawal.amount} has been approved.`,
+    metadata: {
+      withdrawalId: withdrawal._id,
+      stripePayoutId: withdrawal.stripePayoutId
+    }
+  });
 
   return withdrawal;
 };

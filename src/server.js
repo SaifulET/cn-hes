@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import { env } from "./config/env.js";
 import { registerChatSocket } from "./socket/chat.socket.js";
+import { setSocketIO } from "./socket/io.js";
 
 const startServer = async () => {
   try {
@@ -16,6 +17,7 @@ const startServer = async () => {
       }
     });
 
+    setSocketIO(io);
     registerChatSocket(io);
 
     httpServer.listen(env.port, () => {

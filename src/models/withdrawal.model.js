@@ -12,6 +12,22 @@ const withdrawalSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    requestedBankName: {
+      type: String,
+      default: ""
+    },
+    requestedAccountType: {
+      type: String,
+      default: ""
+    },
+    requestedAccountHolderName: {
+      type: String,
+      default: ""
+    },
+    requestedAccountNumberMasked: {
+      type: String,
+      default: ""
+    },
     status: {
       type: String,
       enum: ["pending", "processing", "paid", "failed", "cancelled"],
@@ -53,6 +69,32 @@ const withdrawalSchema = new mongoose.Schema(
     stripeResponse: {
       type: mongoose.Schema.Types.Mixed,
       default: null
+    },
+    destinationBankAccount: {
+      bankName: {
+        type: String,
+        default: ""
+      },
+      accountHolderName: {
+        type: String,
+        default: ""
+      },
+      accountHolderType: {
+        type: String,
+        default: ""
+      },
+      last4: {
+        type: String,
+        default: ""
+      },
+      currency: {
+        type: String,
+        default: ""
+      },
+      country: {
+        type: String,
+        default: ""
+      }
     }
   },
   {
