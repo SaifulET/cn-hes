@@ -1,6 +1,7 @@
 import asyncHandler from "../../helpers/asyncHandler.js";
 import { sendSuccess } from "../../helpers/apiResponse.js";
 import {
+  changePassword,
   forgotPassword,
   getMyProfile,
   logoutUser,
@@ -14,6 +15,7 @@ import {
   verifySignupOtp
 } from "./auth.service.js";
 import {
+  validateChangePasswordInput,
   validateEmailOtpInput,
   validatePasswordReset,
   validateSigninInput,
@@ -64,6 +66,12 @@ export const resetPasswordController = asyncHandler(async (req, res) => {
   validatePasswordReset(req.body);
   await resetPassword(req.body);
   return sendSuccess(res, "Password reset successful.");
+});
+
+export const changePasswordController = asyncHandler(async (req, res) => {
+  validateChangePasswordInput(req.body);
+  await changePassword(req.user._id, req.body);
+  return sendSuccess(res, "Password changed successfully.");
 });
 
 export const refreshTokenController = asyncHandler(async (req, res) => {

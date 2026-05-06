@@ -19,5 +19,11 @@ export const env = {
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   awsRegion: process.env.AWS_REGION || "",
-  awsBucketName: process.env.AWS_BUCKET_NAME || ""
+  awsBucketName: process.env.AWS_BUCKET_NAME || "",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "",
+  stripeCurrency: process.env.STRIPE_CURRENCY || "usd",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  stripeConnectRefreshUrl: process.env.STRIPE_CONNECT_REFRESH_URL || "",
+  stripeConnectReturnUrl: process.env.STRIPE_CONNECT_RETURN_URL || ""
 };

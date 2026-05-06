@@ -38,6 +38,26 @@ export const validatePasswordReset = ({ newPassword, confirmPassword }) => {
   }
 };
 
+export const validateChangePasswordInput = ({
+  oldPassword,
+  newPassword,
+  confirmPassword
+}) => {
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    throw new AppError(
+      "oldPassword, newPassword and confirmPassword are required."
+    );
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new AppError("newPassword and confirmPassword do not match.");
+  }
+
+  if (oldPassword === newPassword) {
+    throw new AppError("New password must be different from old password.");
+  }
+};
+
 export const validateEmailOtpInput = ({ email, otp }) => {
   if (!email || !otp) {
     throw new AppError("Email and otp are required.");

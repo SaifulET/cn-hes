@@ -74,6 +74,15 @@ const userSchema = new mongoose.Schema(
     refreshToken: {
       type: String,
       default: null
+    },
+    stripeAccountId: {
+      type: String,
+      default: ""
+    },
+    stripeAccountStatus: {
+      type: String,
+      enum: ["not_connected", "pending", "connected"],
+      default: "not_connected"
     }
   },
   {

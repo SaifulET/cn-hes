@@ -2,6 +2,7 @@ import { Router } from "express";
 import authMiddleware from "../../middleware/authMiddleware.js";
 import { uploadMiddleware } from "../../middleware/uploadMiddleware.js";
 import {
+  changePasswordController,
   forgotPasswordController,
   getProfile,
   logout,
@@ -24,6 +25,7 @@ router.post("/signin", signin);
 router.post("/forgot-password", forgotPasswordController);
 router.post("/verify-forgot-password-otp", verifyForgotPasswordOtpController);
 router.post("/reset-password", resetPasswordController);
+router.post("/change-password", authMiddleware, changePasswordController);
 router.post("/refresh-token", refreshTokenController);
 router.post("/logout", authMiddleware, logout);
 router.get("/me", authMiddleware, getProfile);

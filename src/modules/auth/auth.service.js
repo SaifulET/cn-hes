@@ -238,6 +238,24 @@ export const resetPassword = async ({ email, newPassword }) => {
   await user.save();
 };
 
+export const changePassword = async (userId, { oldPassword, newPassword }) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  const isOldPasswordMatched = await user.comparePassword(oldPassword);
+
+  if (!isOldPasswordMatched) {
+    throw new AppError("Old password is incorrect.", 401);
+  }
+
+  user.password = newPassword;
+  user.refreshToken = null;
+  await user.save();
+};
+
 export const refreshAccessToken = async ({ refreshToken }) => {
   if (!refreshToken) {
     throw new AppError("Refresh token is required.", 401);
